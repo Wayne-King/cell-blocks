@@ -1,4 +1,4 @@
-from cellFacility import CellFacility
+from cellFacility import CellFacility, OccupantLayout
 from occupant import Occupant
 
 row_count = 7
@@ -24,12 +24,14 @@ def primary_action_sequence():
 	print_facility()
 
 	while facility.secure_singleton_cells(): pass
-	print('secured singledton cells:')
+	print('secured singleton cells:')
 	print_facility()
 
 	secure_open_cells()
 	print('secured open cells:')
-	print(' -- NYI --')
+	print_facility()
+
+	print('Done.')
 
 
 def assign_all_occupants():
@@ -71,6 +73,113 @@ def print_facility():
 		print_row(row_contents)
 
 
+#TODO: move this function, or most of this work, into CellFacility
 def secure_open_cells():
 	"""Traverse-search remaining open cells for the set of layouts that claims them all."""
+
+	def search_and_traverse(vacant_cells: set, solution_track: set):
+		"""The main search & traverse algorithm."""
+
+		if not len(vacant_cells):
+			# all cells secured: solved!
+			return solution_track
+
+		cell = vacant_cells.pop()
+
+		# find remaining layouts that can secure this cell
+		print('***************debug******' 'solution_track')
+		print(solution_track)
+		print('************enddebug******' 'solution_track')
+		remaining_layouts = initial_unsecure_layouts - solution_track
+		overlays = [occ_lay
+				for occ_lay in remaining_layouts
+					if cell in occ_lay.layout.cells]
+		
+		if not len(overlays):
+			# dead end: no solution for this cell and traversal
+			return None
+
+		# traverse each possible layout
+		for occ_lay in overlays:
+			vacant_cells_prime = vacant_cells - occ_lay.layout.cells
+			solution_track_prime = solution_track | {occ_lay}
+
+			traversal_stack.append( (vacant_cells_prime, solution_track_prime) )
+
+		return None
+
+	initial_unsecure_layouts = frozenset({ OccupantLayout(occupant, layout)
+			for occupant in facility.occupants if not occupant.is_secure
+				for layout in occupant.layouts })
+
+	initial_vacant = facility.grid.get_vacant_cells()
+
+	## TODO: maybe don't need this looping -- pick any single, vacant cell and traversing
+	##  from it will check all possible paths, right?
+	#for root_cell in initial_vacant:
+	#
+	#	vacant_cells = initial_vacant.copy()
+	#	solution_track = set()  # set of OccupantLayout
+	#
+	#	traversal_stack = [ (vacant_cells, solution_track) ]
+
+	result = None
+	traversal_stack = [ (initial_vacant, set()) ]
+
+	while not result and len(traversal_stack):
+		result = search_and_traverse(*traversal_stack.pop())
+
+	if result:
+		facility.assign_OccupantLayouts(result)
+	else:
+		print("warning:  did not find a solution. :(")
+
+
+def search_and_traverse_1(vacant_cells: set, solution_track: [], eliminated_layouts: set):
+	#1. pick a vacant cell
+	#		if none, then done; we've solved; return "solved"
+	#2. get possible layouts for it
+	#2.1.  discard eliminated layouts from 'possible' set
+	#2.2.  if none, then failed; abandon this traverse-search; return "continue"
+	#3. for each possible layout:
+	#       but need copies of all these, right?
+	#4. 	add it to solution track
+	#5. 	add it to eliminated layouts
+	#6. 	add it to traversal stack
+	#7. done:  return "continue"
+
+	# if no more vacant cells, then solution_track solves the puzzle
+	if not len(vacant_cells):
+		return solution_track
+
+	vacant = vacant_cells.pop()
+
+def search_and_traverse_2(vacant_cells: set, solution_track: [], unsecured_layouts: set):
+	#1. pick a vacant cell
+	#		if none, then done; we've solved; return "solved"
+	#2. get possible layouts for it
+	#2.1.  if none, then failed; abandon this traverse-search; return "continue"
+	#3. for each possible layout:
+	#       but need copies of all these, right?
+	#4. 	add it to solution track
+	#5. 	remove it from a *copy* of unsecured layouts
+	#6. 	add it to traversal stack
+	#7. done:  return "continue"
+	pass
+
+def search_and_traverse_3(vacant_cells: set, solution_track: []):
+	#1. pick a vacant cell
+	#		if none, then done; we've solved; return "solved"
+	#
+	#2. get possible layouts for the cell
+	#		from among:  all possible original unsecured layouts, MINUS the solution_track layouts
+	#		if none, then failed; abandon this traverse-search; return "continue"
+	#
+	#3. for each possible layout:
+	#		copy of, then:  remove layout's cells from vacant_cells
+	#		copy of, then:  add layout to solution track
+	#		add ... to traversal stack
+	#
+	#4. done:  return "continue"
+
 	pass

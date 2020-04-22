@@ -1,9 +1,9 @@
 from grid import *
 from occupant import Occupant
 
-# consider: is a "cell facility builder" needed?  to support arbitrary
-#  amount of setup type work, and also enable a clear indication of when
-#  setup work is done -- e.g., if want to have occupants readily sorted by row,col
+
+OccupantLayout = namedtuple('OccupantLayout', 'occupant layout')
+
 
 class CellFacility:
 	"""A place containing a grid of cells, cell blocks, occupants, and related."""
@@ -46,9 +46,15 @@ class CellFacility:
 	def assign_occupant_layout(self, occupant, layout):
 		"""Assign an occupant to all the cells of a layout in the grid."""
 		if layout not in occupant.layouts:
-			raise Exception("The layout should already belong to the occupant.")
+			raise Exception("The layout must already belong to the occupant.")
 
 		occupant.assign_secure_layout(layout)
+
+
+	def assign_OccupantLayouts(self, occupant_layouts):
+		"""Assign a set of occupants to all the cells of each of their layouts."""
+		for occ_lay in occupant_layouts:
+			self.assign_occupant_layout(occ_lay.occupant, occ_lay.layout)
 
 
 	def secure_singleton_layouts(self):
@@ -67,7 +73,7 @@ class CellFacility:
 		Returns the number of additional occupants that were secured."""
 
 		# a flat set of all unsecure layouts
-		layouts_unsecure = { (layout, occupant)
+		layouts_unsecure = { OccupantLayout(occupant, layout)
 				for occupant in self.occupants if not occupant.is_secure
 					for layout in occupant.layouts }
 
@@ -78,16 +84,16 @@ class CellFacility:
 			cell = vacant_cells.pop()
 
 			# get the layouts that overlay this cell
-			overlays = [ layout_and_occupant
-					for layout_and_occupant in layouts_unsecure
-						if cell in layout_and_occupant[0].cells ]  #TODO: ok for layout.cells to omit anchor
+			overlays = [occ_lay
+					for occ_lay in layouts_unsecure
+						if cell in occ_lay.layout.cells]  #TODO: ok for layout.cells to omit anchor
 
 			# if exactly one, then assign it
 			if len(overlays) == 1:
-				self.assign_occupant_layout(layout=overlays[0][0], occupant=overlays[0][1])
+				self.assign_occupant_layout(overlays[0].occupant, overlays[0].layout)
 				secured_count += 1
 
 				layouts_unsecure.remove(overlays[0])
-				vacant_cells -= overlays[0][0].cells
+				vacant_cells -= overlays[0].layout.cells
 
 		return secured_count
