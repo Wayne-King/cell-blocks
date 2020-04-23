@@ -71,14 +71,22 @@ class CellFacility:
 			self.assign_occupant_layout(occ_lay.occupant, occ_lay.layout)
 
 
-	def secure_singleton_layouts(self):
-		"""Claim the cells of each occupant that has exactly one layout."""
+	def secure_singleton_layouts(self) -> int:
+		"""Claim the cells of each occupant that has exactly one layout.
+		
+		Returns the number of additional occupants that were secured."""
+		secured_count = 0
+
 		for occupant in self.occupants:
 			if len(occupant.layouts) == 0:
+				# CONSIDER: is this check really needed
 				raise Exception(f"Occupant at {occupant.anchor} has no layouts.")
 
-			elif len(occupant.layouts) == 1:
+			if not occupant.is_secure and len(occupant.layouts) == 1:
 				self.assign_occupant_layout(occupant, occupant.layouts[0])
+				secured_count += 1
+
+		return secured_count
 
 
 	def secure_singleton_cells(self) -> int:

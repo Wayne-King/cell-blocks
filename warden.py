@@ -19,7 +19,7 @@ def primary_action_sequence():
 
 	facility.abandon_nonisolating_layouts()
 
-	facility.secure_singleton_layouts()
+	while facility.secure_singleton_layouts(): pass
 	print('secured singleton layouts:')
 	print_facility()
 
@@ -136,8 +136,10 @@ def secure_open_cells():
 
 	if result:
 		facility.assign_OccupantLayouts(result)
-	else:
+	elif result is None:
 		print("warning:  did not find a solution. :(")
+	else:
+		print("Hah!  puzzle is too easy, traversal search wasn't even needed. :P")
 
 
 primary_action_sequence()
