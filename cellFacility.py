@@ -43,12 +43,26 @@ class CellFacility:
 					occupant.layouts.remove(layout)
 
 
+	def abandon_redundant_layouts(self, layout):
+		"""Abandon any occupants' layouts that intrude upon a specified layout."""
+
+		for test_occupant in self.occupants:
+			for test_layout in test_occupant.layouts:
+				# TODO: occupant class should take care of this work
+
+				# if any intersecting cells, remove the whole layout
+				if test_layout != layout \
+						and not layout.cells.isdisjoint(test_layout.cells):
+					test_occupant.layouts.remove(test_layout)
+
+
 	def assign_occupant_layout(self, occupant, layout):
 		"""Assign an occupant to all the cells of a layout in the grid."""
 		if layout not in occupant.layouts:
 			raise Exception("The layout must already belong to the occupant.")
 
 		occupant.assign_secure_layout(layout)
+		self.abandon_redundant_layouts(layout)
 
 
 	def assign_OccupantLayouts(self, occupant_layouts):

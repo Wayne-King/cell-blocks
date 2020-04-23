@@ -87,20 +87,25 @@ def secure_open_cells():
 		cell = vacant_cells.pop()
 
 		# find remaining layouts that can secure this cell
-		print('***************debug******' 'solution_track')
-		print(solution_track)
-		print('************enddebug******' 'solution_track')
-		remaining_layouts = initial_unsecure_layouts - solution_track
-		overlays = [occ_lay
+		solution_track_cells = {cell
+				for occ_lay in solution_track for cell in occ_lay.layout.cells}
+		layouts_over_solution_track = {occ_lay
+				for occ_lay in initial_unsecure_layouts
+				if not occ_lay.layout.cells.isdisjoint(solution_track_cells)}
+
+		assert(solution_track <= layouts_over_solution_track)
+		remaining_layouts = initial_unsecure_layouts - layouts_over_solution_track
+
+		layouts_over_cell = [occ_lay
 				for occ_lay in remaining_layouts
-					if cell in occ_lay.layout.cells]
+				if cell in occ_lay.layout.cells]
 		
-		if not len(overlays):
+		if not len(layouts_over_cell):
 			# dead end: no solution for this cell and traversal
 			return None
 
 		# traverse each possible layout
-		for occ_lay in overlays:
+		for occ_lay in layouts_over_cell:
 			vacant_cells_prime = vacant_cells - occ_lay.layout.cells
 			solution_track_prime = solution_track | {occ_lay}
 
@@ -135,51 +140,4 @@ def secure_open_cells():
 		print("warning:  did not find a solution. :(")
 
 
-def search_and_traverse_1(vacant_cells: set, solution_track: [], eliminated_layouts: set):
-	#1. pick a vacant cell
-	#		if none, then done; we've solved; return "solved"
-	#2. get possible layouts for it
-	#2.1.  discard eliminated layouts from 'possible' set
-	#2.2.  if none, then failed; abandon this traverse-search; return "continue"
-	#3. for each possible layout:
-	#       but need copies of all these, right?
-	#4. 	add it to solution track
-	#5. 	add it to eliminated layouts
-	#6. 	add it to traversal stack
-	#7. done:  return "continue"
-
-	# if no more vacant cells, then solution_track solves the puzzle
-	if not len(vacant_cells):
-		return solution_track
-
-	vacant = vacant_cells.pop()
-
-def search_and_traverse_2(vacant_cells: set, solution_track: [], unsecured_layouts: set):
-	#1. pick a vacant cell
-	#		if none, then done; we've solved; return "solved"
-	#2. get possible layouts for it
-	#2.1.  if none, then failed; abandon this traverse-search; return "continue"
-	#3. for each possible layout:
-	#       but need copies of all these, right?
-	#4. 	add it to solution track
-	#5. 	remove it from a *copy* of unsecured layouts
-	#6. 	add it to traversal stack
-	#7. done:  return "continue"
-	pass
-
-def search_and_traverse_3(vacant_cells: set, solution_track: []):
-	#1. pick a vacant cell
-	#		if none, then done; we've solved; return "solved"
-	#
-	#2. get possible layouts for the cell
-	#		from among:  all possible original unsecured layouts, MINUS the solution_track layouts
-	#		if none, then failed; abandon this traverse-search; return "continue"
-	#
-	#3. for each possible layout:
-	#		copy of, then:  remove layout's cells from vacant_cells
-	#		copy of, then:  add layout to solution track
-	#		add ... to traversal stack
-	#
-	#4. done:  return "continue"
-
-	pass
+primary_action_sequence()
