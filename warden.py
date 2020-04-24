@@ -27,8 +27,13 @@ def primary_action_sequence():
 	print('secured singleton cells:')
 	print_facility()
 
-	secure_open_cells()
-	print('secured open cells:')
+	secure_count = facility.secure_open_cells()
+	if secure_count is None:
+		print("Warning:  did not find a solution to the puzzle. :(")
+	elif secure_count == 0:
+		print("Hah! Puzzle is too easy, traversal search was a no-op. :P")
+	else:
+		print('Secured all open cells:')
 	print_facility()
 
 	print('Done.')
@@ -71,75 +76,6 @@ def print_facility():
 			row_contents += [occupant.volume if occupant else ' ']
 
 		print_row(row_contents)
-
-
-#TODO: move this function, or most of this work, into CellFacility
-def secure_open_cells():
-	"""Traverse-search remaining open cells for the set of layouts that claims them all."""
-
-	def search_and_traverse(vacant_cells: set, solution_track: set):
-		"""The main search & traverse algorithm."""
-
-		if not len(vacant_cells):
-			# all cells secured: solved!
-			return solution_track
-
-		cell = vacant_cells.pop()
-
-		# find remaining layouts that can secure this cell
-		solution_track_cells = {cell
-				for occ_lay in solution_track for cell in occ_lay.layout.cells}
-		layouts_over_solution_track = {occ_lay
-				for occ_lay in initial_unsecure_layouts
-				if not occ_lay.layout.cells.isdisjoint(solution_track_cells)}
-
-		assert(solution_track <= layouts_over_solution_track)
-		remaining_layouts = initial_unsecure_layouts - layouts_over_solution_track
-
-		layouts_over_cell = [occ_lay
-				for occ_lay in remaining_layouts
-				if cell in occ_lay.layout.cells]
-		
-		if not len(layouts_over_cell):
-			# dead end: no solution for this cell and traversal
-			return None
-
-		# traverse each possible layout
-		for occ_lay in layouts_over_cell:
-			vacant_cells_prime = vacant_cells - occ_lay.layout.cells
-			solution_track_prime = solution_track | {occ_lay}
-
-			traversal_stack.append( (vacant_cells_prime, solution_track_prime) )
-
-		return None
-
-	initial_unsecure_layouts = frozenset({ OccupantLayout(occupant, layout)
-			for occupant in facility.occupants if not occupant.is_secure
-				for layout in occupant.layouts })
-
-	initial_vacant = facility.grid.get_vacant_cells()
-
-	## TODO: maybe don't need this looping -- pick any single, vacant cell and traversing
-	##  from it will check all possible paths, right?
-	#for root_cell in initial_vacant:
-	#
-	#	vacant_cells = initial_vacant.copy()
-	#	solution_track = set()  # set of OccupantLayout
-	#
-	#	traversal_stack = [ (vacant_cells, solution_track) ]
-
-	result = None
-	traversal_stack = [ (initial_vacant, set()) ]
-
-	while not result and len(traversal_stack):
-		result = search_and_traverse(*traversal_stack.pop())
-
-	if result:
-		facility.assign_OccupantLayouts(result)
-	elif result is None:
-		print("warning:  did not find a solution. :(")
-	else:
-		print("Hah!  puzzle is too easy, traversal search wasn't even needed. :P")
 
 
 primary_action_sequence()

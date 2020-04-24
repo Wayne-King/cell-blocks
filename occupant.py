@@ -101,3 +101,26 @@ class Occupant:
 				self.layouts.append(Layout(
 						Location(topleft_row, topleft_col),
 						RectangleSize(pattern.rows, pattern.columns)))
+
+
+	def abandon_obstructed_layouts(self, obstructions):
+		"""Abandon layouts that intrude upon any obstructing cells."""
+
+		for layout in self.layouts.copy():
+
+			# self anchor cannot be obstructed:
+			layout_cells = layout.cells - {self.anchor}
+
+			if not layout_cells.isdisjoint(obstructions):
+				self.layouts.remove(layout)
+
+
+	def abandon_redundant_layouts(self, layout):
+		"""Abandon layouts that intrude upon a specified layout."""
+
+		for test_layout in self.layouts.copy():
+
+			# note 'layout' cannot obstruct itself
+			if test_layout is not layout \
+					and not layout.cells.isdisjoint(test_layout.cells):
+				self.layouts.remove(test_layout)

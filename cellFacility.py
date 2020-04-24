@@ -27,33 +27,17 @@ class CellFacility:
 
 	def abandon_nonisolating_layouts(self):
 		"""Abandon occupants' layouts that intrude upon another occupant's anchor cell."""
-
-		all_anchors = { occupant.anchor for occupant in self.occupants }
+		all_anchors = frozenset({ occupant.anchor for occupant in self.occupants })
 
 		for occupant in self.occupants:
-			for layout in occupant.layouts.copy():
-				# TODO: the occupant class should take care of examining the layout cells
-				#       and especially of updating the layouts list
-
-				# get the cells (locations) of this layout, sans the anchor cell
-				layout_cells = layout.cells - {occupant.anchor}
-
-				# discard the layout if it overlaps any anchors
-				if not layout_cells.isdisjoint(all_anchors):
-					occupant.layouts.remove(layout)
+			occupant.abandon_obstructed_layouts(all_anchors)
 
 
 	def abandon_redundant_layouts(self, layout):
 		"""Abandon any occupants' layouts that intrude upon a specified layout."""
 
-		for test_occupant in self.occupants:
-			for test_layout in test_occupant.layouts:
-				# TODO: occupant class should take care of this work
-
-				# if any intersecting cells, remove the whole layout
-				if test_layout != layout \
-						and not layout.cells.isdisjoint(test_layout.cells):
-					test_occupant.layouts.remove(test_layout)
+		for occupant in self.occupants:
+			occupant.abandon_redundant_layouts(layout)
 
 
 	def assign_occupant_layout(self, occupant, layout):
@@ -119,3 +103,65 @@ class CellFacility:
 				vacant_cells -= overlays[0].layout.cells
 
 		return secured_count
+
+
+	def secure_open_cells(self) -> int:
+		"""Traverse-search open cells for the set of layouts that claims them all.
+		
+		Returns the number of additional occupants that were secured."""
+
+		def search_and_traverse(vacant_cells: set, solution_track: set):
+			"""The main search & traverse algorithm."""
+
+			if not len(vacant_cells):
+				# all cells secured: solved!
+				return solution_track
+
+			cell = vacant_cells.pop()
+
+			# find remaining layouts that can secure this cell
+			solution_track_cells = {cell
+					for occ_lay in solution_track for cell in occ_lay.layout.cells}
+			layouts_over_solution_track = {occ_lay
+					for occ_lay in initial_unsecure_layouts
+					if not occ_lay.layout.cells.isdisjoint(solution_track_cells)}
+
+			assert(solution_track <= layouts_over_solution_track)
+			remaining_layouts = initial_unsecure_layouts - layouts_over_solution_track
+
+			layouts_over_cell = [occ_lay
+					for occ_lay in remaining_layouts
+					if cell in occ_lay.layout.cells]
+			
+			if not len(layouts_over_cell):
+				# dead end: no solution for this cell and traversal
+				return None
+
+			# traverse each possible layout
+			for occ_lay in layouts_over_cell:
+				vacant_cells_prime = vacant_cells - occ_lay.layout.cells
+				solution_track_prime = solution_track | {occ_lay}
+
+				traversal_stack.append( (vacant_cells_prime, solution_track_prime) )
+
+			return None
+
+		initial_unsecure_layouts = frozenset({ OccupantLayout(occupant, layout)
+				for occupant in self.occupants if not occupant.is_secure
+					for layout in occupant.layouts })
+
+		initial_vacant = self.grid.get_vacant_cells()
+
+		result = None
+		traversal_stack = [ (initial_vacant, set()) ]
+
+		while not result and len(traversal_stack):
+			result = search_and_traverse(*traversal_stack.pop())
+
+		if result:
+			self.assign_OccupantLayouts(result)
+			return len(result)
+		elif result is None:
+			return None
+		else:
+			return 0
